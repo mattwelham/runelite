@@ -287,8 +287,49 @@ public class OverlayRenderer extends MouseAdapter implements KeyListener
 						location.setLocation(preferredLocation);
 					}
 
+					final Dimension realDimensions = client.getRealDimensions();
+
+					//if the overlay location has been changed since last render, update scaling values
+					if ( overlay.isPreferredLocationUpdated() == true )
+					{
+						overlay.updatePreferredLocationScalingValues(realDimensions);
+					}
+
+					//Overlay scales based on game scaling so it stays positioned relative to the game window
+					if ( overlay.isPreferredLocationUsingGameScaling() )
+					{
+						if (overlay.getPreferredLocationWidthPercent() >= 0 && overlay.getPreferredLocationHeightPercent() >= 0)
+						{
+							location.x = (int) (realDimensions.width * overlay.getPreferredLocationWidthPercent());
+							location.y = (int) (realDimensions.height * overlay.getPreferredLocationHeightPercent());
+						}
+					}
+
+					//Overlay scales based on UI scaling so it stays positioned relative to other UI elements
+					if ( overlay.isPreferredLocationUsingUIScaling() )
+					{
+						if (overlay.getPreferredLocationLeftMargin() >= 0)
+						{
+							location.x = overlay.getPreferredLocationLeftMargin();
+						}
+						else if (overlay.getPreferredLocationRightMargin() >= 0)
+						{
+							location.x = realDimensions.width - overlay.getPreferredLocationRightMargin();
+						}
+
+						if (overlay.getPreferredLocationTopMargin() >= 0)
+						{
+							location.y = overlay.getPreferredLocationTopMargin();
+						}
+						else if (overlay.getPreferredLocationBottomMargin() >= 0)
+						{
+							location.y = realDimensions.height - overlay.getPreferredLocationBottomMargin();
+						}
+					}
+
 					// Clamp the overlay position to ensure it is on screen or within parent bounds
 					clampOverlayLocation(location, dimension.width, dimension.height, overlay);
+
 				}
 
 				if (overlay.getPreferredSize() != null)

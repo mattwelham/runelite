@@ -40,6 +40,7 @@ import javax.inject.Singleton;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.MenuAction;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.widgets.WidgetID;
@@ -56,12 +57,21 @@ import net.runelite.client.events.PluginChanged;
 /**
  * Manages state of all game overlays
  */
+@Slf4j
 @Singleton
 public class OverlayManager
 {
 	public static final String OPTION_CONFIGURE = "Configure";
 
 	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION = "_preferredLocation";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_GAME_SCALING = "_preferredLocationUsingGameScaling";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_UI_SCALING = "_preferredLocationUsingUIScaling";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_WIDTH_PERCENT = "_preferredLocationWidthPercent";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_HEIGHT_PERCENT = "_preferredLocationHeightPercent";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_TOP_MARGIN = "_preferredLocationTopMargin";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_BOTTOM_MARGIN = "_preferredLocationBottomMargin";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_LEFT_MARGIN = "_preferredLocationLeftMargin";
+	private static final String OVERLAY_CONFIG_PREFERRED_LOCATION_RIGHT_MARGIN = "_preferredLocationRightMargin";
 	private static final String OVERLAY_CONFIG_PREFERRED_POSITION = "_preferredPosition";
 	private static final String OVERLAY_CONFIG_PREFERRED_SIZE = "_preferredSize";
 	private static final String RUNELITE_CONFIG_GROUP_NAME = RuneLiteConfig.class.getAnnotation(ConfigGroup.class).value();
@@ -85,8 +95,8 @@ public class OverlayManager
 		// draw *earlier* so that they are closer to their
 		// defined position.
 		return aPos == OverlayPosition.DYNAMIC
-			? a.getPriority().compareTo(b.getPriority())
-			: b.getPriority().compareTo(a.getPriority());
+				? a.getPriority().compareTo(b.getPriority())
+				: b.getPriority().compareTo(a.getPriority());
 	};
 
 	/**
@@ -153,9 +163,9 @@ public class OverlayManager
 		{
 			List<OverlayMenuEntry> menuEntries = overlay.getMenuEntries();
 			OverlayMenuEntry overlayMenuEntry = menuEntries.stream()
-				.filter(me -> me.getOption().equals(event.getMenuOption()))
-				.findAny()
-				.orElse(null);
+					.filter(me -> me.getOption().equals(event.getMenuOption()))
+					.findAny()
+					.orElse(null);
 			if (overlayMenuEntry != null)
 			{
 				eventBus.post(new OverlayMenuClicked(overlayMenuEntry, overlay));
@@ -366,15 +376,55 @@ public class OverlayManager
 		if (overlay.getPreferredLocation() != null)
 		{
 			configManager.setConfiguration(
-				RUNELITE_CONFIG_GROUP_NAME,
-				key,
-				overlay.getPreferredLocation());
+					RUNELITE_CONFIG_GROUP_NAME,
+					key,
+					overlay.getPreferredLocation());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_GAME_SCALING,
+					overlay.isPreferredLocationUsingGameScaling());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_UI_SCALING,
+					overlay.isPreferredLocationUsingUIScaling());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_WIDTH_PERCENT,
+					overlay.getPreferredLocationWidthPercent());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_HEIGHT_PERCENT,
+					overlay.getPreferredLocationHeightPercent());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_TOP_MARGIN,
+					overlay.getPreferredLocationTopMargin());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_BOTTOM_MARGIN,
+					overlay.getPreferredLocationBottomMargin());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_LEFT_MARGIN,
+					overlay.getPreferredLocationLeftMargin());
+
+			configManager.setConfiguration(
+					RUNELITE_CONFIG_GROUP_NAME,
+					key + OVERLAY_CONFIG_PREFERRED_LOCATION_RIGHT_MARGIN,
+					overlay.getPreferredLocationRightMargin());
 		}
 		else
 		{
 			configManager.unsetConfiguration(
-				RUNELITE_CONFIG_GROUP_NAME,
-				key);
+					RUNELITE_CONFIG_GROUP_NAME,
+					key);
 		}
 	}
 
@@ -384,15 +434,15 @@ public class OverlayManager
 		if (overlay.getPreferredSize() != null)
 		{
 			configManager.setConfiguration(
-				RUNELITE_CONFIG_GROUP_NAME,
-				key,
-				overlay.getPreferredSize());
+					RUNELITE_CONFIG_GROUP_NAME,
+					key,
+					overlay.getPreferredSize());
 		}
 		else
 		{
 			configManager.unsetConfiguration(
-				RUNELITE_CONFIG_GROUP_NAME,
-				key);
+					RUNELITE_CONFIG_GROUP_NAME,
+					key);
 		}
 	}
 
@@ -402,21 +452,77 @@ public class OverlayManager
 		if (overlay.getPreferredPosition() != null)
 		{
 			configManager.setConfiguration(
-				RUNELITE_CONFIG_GROUP_NAME,
-				key,
-				overlay.getPreferredPosition());
+					RUNELITE_CONFIG_GROUP_NAME,
+					key,
+					overlay.getPreferredPosition());
+
 		}
 		else
 		{
 			configManager.unsetConfiguration(
-				RUNELITE_CONFIG_GROUP_NAME,
-				key);
+					RUNELITE_CONFIG_GROUP_NAME,
+					key);
 		}
 	}
 
 	private Point loadOverlayLocation(final Overlay overlay)
 	{
 		final String key = overlay.getName() + OVERLAY_CONFIG_PREFERRED_LOCATION;
+
+		Boolean usingGameScaling = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_GAME_SCALING, Boolean.class);
+		if (usingGameScaling != null)
+		{
+			overlay.setPreferredLocationUsingGameScaling(usingGameScaling.booleanValue());
+		}
+
+		Boolean usingUIScaling = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_UI_SCALING, Boolean.class);
+		if (usingUIScaling != null)
+		{
+			overlay.setPreferredLocationUsingUIScaling(usingUIScaling.booleanValue());
+		}
+
+		String widthPercentStr = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_WIDTH_PERCENT, String.class);
+		if (widthPercentStr != null)
+		{
+			Float widthPercent = new Float(widthPercentStr);
+			overlay.setPreferredLocationWidthPercent(widthPercent.floatValue());
+		}
+
+		String heightPercentStr = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_HEIGHT_PERCENT, String.class);
+		if (heightPercentStr != null)
+		{
+			Float heightPercent = new Float(heightPercentStr);
+			overlay.setPreferredLocationHeightPercent(heightPercent.floatValue());
+		}
+
+		String topMarginStr = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_TOP_MARGIN, String.class);
+		if (topMarginStr != null)
+		{
+			Integer topMargin = new Integer(topMarginStr);
+			overlay.setPreferredLocationTopMargin(topMargin.intValue());
+		}
+
+		String bottomMarginStr = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_BOTTOM_MARGIN, String.class);
+		if (bottomMarginStr != null)
+		{
+			Integer bottomMargin = new Integer(bottomMarginStr);
+			overlay.setPreferredLocationBottomMargin(bottomMargin.intValue());
+		}
+
+		String leftMarginStr = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_LEFT_MARGIN, String.class);
+		if (leftMarginStr != null)
+		{
+			Integer leftMargin = new Integer(leftMarginStr);
+			overlay.setPreferredLocationLeftMargin(leftMargin.intValue());
+		}
+
+		String rightMarginStr = configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key + OVERLAY_CONFIG_PREFERRED_LOCATION_RIGHT_MARGIN, String.class);
+		if (rightMarginStr != null)
+		{
+			Integer rightMargin = new Integer(rightMarginStr);
+			overlay.setPreferredLocationRightMargin(rightMargin.intValue());
+		}
+
 		return configManager.getConfiguration(RUNELITE_CONFIG_GROUP_NAME, key, Point.class);
 	}
 

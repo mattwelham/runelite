@@ -33,17 +33,28 @@ import javax.annotation.Nullable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
 
 @Getter
 @Setter
+@Slf4j
 public abstract class Overlay implements LayoutableRenderableEntity
 {
 	@Nullable
 	private final Plugin plugin;
 	private Point preferredLocation;
+	private boolean preferredLocationUpdated = false;
+	private boolean preferredLocationUsingUIScaling = true;
+	private boolean preferredLocationUsingGameScaling = false;
+	private float preferredLocationWidthPercent = -1;
+	private float preferredLocationHeightPercent = -1;
+	private int preferredLocationLeftMargin = -1;
+	private int preferredLocationRightMargin = -1;
+	private int preferredLocationTopMargin = -1;
+	private int preferredLocationBottomMargin = -1;
 	private Dimension preferredSize;
 	private OverlayPosition preferredPosition;
 	private Rectangle bounds = new Rectangle();
@@ -119,5 +130,66 @@ public abstract class Overlay implements LayoutableRenderableEntity
 	public Rectangle getParentBounds()
 	{
 		return null;
+	}
+
+	public void setPreferredLocation(final Point preferredLocation)
+	{
+		if ( preferredLocation != null)
+		{
+			log.debug("preferredLocation.x: {}", preferredLocation.x);
+			log.debug("preferredLocation.y: {}", preferredLocation.y);
+			this.preferredLocation = preferredLocation;
+			this.preferredLocationUpdated = true;
+		}
+		else
+		{
+			log.warn("setPreferredLocation: Location null");
+		}
+	}
+
+	public void updatePreferredLocationScalingValues(final Dimension clientDimensions)
+	{
+
+		//Overlay scales based on game scaling so it stays positioned relative to the game window
+		if ( this.preferredLocationUsingGameScaling )
+		{
+			this.preferredLocationWidthPercent = (float) preferredLocation.x / (float) clientDimensions.width;
+			this.preferredLocationHeightPercent = (float) preferredLocation.y / (float) clientDimensions.height;
+		}
+
+		//Overlay scales based on UI scaling so it stays positioned relative to UI elements
+		if ( this.preferredLocationUsingUIScaling )
+		{
+			log.debug("preferredLocation.x: {}", preferredLocation.x);
+			log.debug("clientDimensions.width: {}", clientDimensions.width);
+			//If overlay is on left side of the screen attach it to the left edge of the screen for horizontal positioning
+			if (preferredLocation.x <= clientDimensions.width / 2)
+			{
+				this.preferredLocationLeftMargin = preferredLocation.x;
+				this.preferredLocationRightMargin= -1;
+			}
+			//Otherwise attach it to the right edge of the screen for horizontal positioning
+			else
+			{
+				this.preferredLocationRightMargin = clientDimensions.width - preferredLocation.x;
+				this.preferredLocationLeftMargin = -1;
+			}
+
+			//If overlay is on top half of the screen attach it to the top edge of the screen for vertical positioning
+			if (preferredLocation.y <= clientDimensions.height / 2)
+			{
+				this.preferredLocationTopMargin = preferredLocation.y;
+				this.preferredLocationBottomMargin = -1;
+			}
+			//Otherwise attach it to the bottom edge of the screen for vertical positioning
+			else
+			{
+				this.preferredLocationBottomMargin = clientDimensions.height - preferredLocation.y;
+				this.preferredLocationTopMargin = -1;
+			}
+		}
+
+		this.preferredLocationUpdated = false;
+
 	}
 }
